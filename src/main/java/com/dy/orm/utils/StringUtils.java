@@ -13,6 +13,15 @@ public class StringUtils {
         if (org.apache.commons.lang.StringUtils.isEmpty((String) property)) {
             throw ArgumentException.IllegalArgumentException(property + "没有get方法");
         }
+    }
 
+    public static boolean ObjectsIsNull(Object... params) {
+        if (params == null) {
+            return true;
+        }
+        if (params.length < 1) {
+            return true;
+        }
+        return false;
     }
 }

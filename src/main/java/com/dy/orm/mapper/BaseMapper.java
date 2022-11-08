@@ -6,6 +6,7 @@ import com.dy.orm.helper.ColumnToPropertyMapping;
 import com.dy.orm.helper.PropertyFieldMapping;
 import com.dy.orm.utils.CollectionUtils;
 import com.dy.orm.utils.MySQLUtils;
+import com.dy.orm.utils.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -73,9 +74,11 @@ public class BaseMapper<E> {
         try {
             connection = MySQLUtils.getConnection();
             ps = connection.prepareStatement(sql);
-            // 填入？
-            for (int i = 0; i < params.length; i++) {
-                ps.setObject(i + 1, params[i]);
+            if (!StringUtils.ObjectsIsNull(params)) {
+                // 填入？
+                for (int i = 0; i < params.length; i++) {
+                    ps.setObject(i + 1, params[i]);
+                }
             }
             resultSet = ps.executeQuery();
             while (resultSet.next()) {
@@ -85,7 +88,6 @@ public class BaseMapper<E> {
                     Object property = mapping.getProperty();
                     field = clazz.getDeclaredField(String.valueOf(property));
                     field.setAccessible(true);
-                    System.out.println(field);
                     field.set(returnType, resultSet.getObject(String.valueOf(mapping.getColumn())));
                 }
                 ret.add(returnType);

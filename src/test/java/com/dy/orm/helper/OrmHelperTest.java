@@ -33,4 +33,10 @@ public class OrmHelperTest {
         List<Student> students = ormHelper.selectByPrimaryKey(student);
         students.forEach(System.out::println);
     }
+
+    @Test
+    public void testSelectAll() {
+        List<Student> students = ormHelper.selectAll(Student.class);
+        students.forEach(System.out::println);
+    }
 }

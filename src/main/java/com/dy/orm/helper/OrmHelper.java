@@ -10,8 +10,7 @@ import com.dy.orm.mapper.BaseMapper;
 import com.dy.orm.utils.GetterSetterUtils;
 import com.dy.orm.utils.StringUtils;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
+import java.lang.reflect.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -90,6 +89,32 @@ public class OrmHelper<E> {
         sql.append(" from ").append(getTableName((Class<E>) clazz)).append(" where ").append(idColumnName);
         sql.append(" = ?" + ";");
         return new BaseMapper<E>().executeSelect(sql.toString(), element, propertyMapping, params);
+    }
+
+    /**
+     * 查询所有的记录
+     *
+     * @param clazz 类
+     * @return 所有的数据
+     */
+    public List<E> selectAll(Class<E> clazz) {
+        E element = null;
+        try {
+            element = clazz.newInstance();
+        } catch (InstantiationException | IllegalAccessException e) {
+            e.printStackTrace();
+        }
+        // 查询所有的mapping
+        List<ColumnToPropertyMapping<Object, Object>> allPropertyFieldMapping = getAllPropertyFieldMapping(clazz);
+        List<String> columns = getColumns((Class<E>) clazz);
+        StringBuilder sb = new StringBuilder();
+        sb.append("select ");
+        for (String column : columns) {
+            sb.append(column + ",");
+        }
+        sb.deleteCharAt(sb.length() - 1);
+        sb.append(" from ").append(getTableName((Class<E>) clazz));
+        return new BaseMapper<E>().executeSelect(sb.toString(), element, allPropertyFieldMapping, null);
     }
 
     /**
@@ -249,12 +274,37 @@ public class OrmHelper<E> {
         for (Field declaredField : declaredFields) {
             declaredField.setAccessible(true);
             if (!declaredField.isAnnotationPresent(Column.class) && !declaredField.isAnnotationPresent(Id.class)) {
-                throw ArgumentException.IllegalArgumentException(declaredField.getName() + "没有@Column注解");
+                throw ArgumentException.IllegalArgumentException(declaredField.getName() + "没有@Column注解和@Id注解");
             }
             Column column = declaredField.getAnnotation(Column.class);
             if (null != column) {
                 StringUtils.getStringNotNull(column.value());
                 mappings.add(new ColumnToPropertyMapping<>(declaredField.getName(), column.value()));
+            }
+        }
+        return mappings;
+    }
+
+    /**
+     * 获取所有的mappings
+     *
+     * @param clazz 类
+     * @return 所有的mappings
+     */
+    private List<ColumnToPropertyMapping<Object, Object>> getAllPropertyFieldMapping(Class<E> clazz) {
+        Field[] declaredFields = clazz.getDeclaredFields();
+        List<ColumnToPropertyMapping<Object, Object>> mappings = new ArrayList<>();
+        for (Field declaredField : declaredFields) {
+            declaredField.setAccessible(true);
+            if (!declaredField.isAnnotationPresent(Column.class) && !declaredField.isAnnotationPresent(Id.class)) {
+                throw ArgumentException.IllegalArgumentException(declaredField.getName() + "没有@Column注解和@Id注解");
+            }
+            if (null != declaredField.getAnnotation(Id.class)) {
+                StringUtils.getStringNotNull(declaredField.getAnnotation(Id.class).value());
+                mappings.add(new ColumnToPropertyMapping<>(declaredField.getName(), declaredField.getAnnotation(Id.class).value()));
+            } else if (null != declaredField.getAnnotation(Column.class)) {
+                StringUtils.getStringNotNull(declaredField.getAnnotation(Column.class).value());
+                mappings.add(new ColumnToPropertyMapping<>(declaredField.getName(), declaredField.getAnnotation(Column.class).value()));
             }
         }
         return mappings;

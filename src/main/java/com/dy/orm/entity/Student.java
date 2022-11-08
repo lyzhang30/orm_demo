@@ -23,6 +23,16 @@ public class Student {
     @Column(value = "age", type = "int")
     private Integer age;
 
+    public Student(Long sid, String sName, String sex, Integer age) {
+        this.sid = sid;
+        this.sName = sName;
+        this.sex = sex;
+        this.age = age;
+    }
+
+    public Student() {
+    }
+
     public Long getSid() {
         return sid;
     }
