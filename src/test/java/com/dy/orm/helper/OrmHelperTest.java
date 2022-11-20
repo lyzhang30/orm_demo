@@ -11,10 +11,11 @@ import java.util.List;
  */
 public class OrmHelperTest {
 
-    private OrmHelper<Student> ormHelper = new OrmHelper<>();
+    private OrmHelper<Student> ormHelper = new OrmHelper<>(false);;
 
     @Test
     public void testAdd() {
+
         Student student = new Student();
         student.setSid(30L);
         student.setAge(10);
@@ -38,5 +39,24 @@ public class OrmHelperTest {
     public void testSelectAll() {
         List<Student> students = ormHelper.selectAll(Student.class);
         students.forEach(System.out::println);
+    }
+
+    @Test
+    public void testUpdateByPrimaryKey() {
+        Student student = new Student();
+        student.setSid(1L);
+        student.setAge(28);
+        student.setsName("大勇");
+        student.setSex("M");
+        ormHelper.updateByPrimaryKey(student);
+    }
+
+    public void testDelete() {
+        Student student = new Student();
+        student.setSid(1L);
+        student.setAge(28);
+        student.setsName("大勇");
+        student.setSex("M");
+        ormHelper.delete(student);
     }
 }

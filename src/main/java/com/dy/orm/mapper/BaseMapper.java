@@ -25,9 +25,25 @@ import java.util.List;
  * @author zhanglianyong
  * 2022/11/7 21:18
  */
-public class BaseMapper<E> {
+public class BaseMapper<E> implements Mapper<E> {
 
-    public static final Logger logger = LoggerFactory.getLogger(BaseMapper .class);
+    public static final Logger logger = LoggerFactory.getLogger(BaseMapper.class);
+
+    private Connection connection;
+
+    private PreparedStatement ps;
+
+    private boolean autoCommit;
+
+
+    public BaseMapper() {
+        this.connection = MySQLUtils.getConnection();
+    }
+
+    public BaseMapper(boolean autoCommit) {
+        this.connection = MySQLUtils.getConnection();
+        this.autoCommit = autoCommit;
+    }
 
     /**
      * 执行更新操作
@@ -38,16 +54,12 @@ public class BaseMapper<E> {
     public int executeUpdate(String sql, Object... params) {
         // 执行失败
         int result = -1;
-        Connection connection = null;
-        PreparedStatement ps = null;
         try {
-            connection = MySQLUtils.getConnection();
+            setAutoCommitFor();
             ps = connection.prepareStatement(sql);
-            for (int i = 0; i < params.length; i++) {
-                ps.setObject(i + 1, params[i]);
-            }
+            setParams(ps, params);
             result = ps.executeUpdate();
-
+            commitConnection();
         } catch (Exception ex) {
             System.out.println("更新数据库异常");
             logger.error(ex.getMessage());
@@ -61,9 +73,6 @@ public class BaseMapper<E> {
     public List<E> executeSelect(String sql, E element, List<ColumnToPropertyMapping<Object, Object>> mappings,
                                  Object... params) {
 
-        Connection connection = null;
-        PreparedStatement ps = null;
-        ResultSet resultSet;
         List<E> ret = new ArrayList<>();
         if (CollectionUtils.CollectionIsNull(mappings)) {
             throw new ArgumentException("没有配置数据库字段注解和属性之间的映射，请检查实体是否有填写相应的注解", new RuntimeException());
@@ -72,15 +81,10 @@ public class BaseMapper<E> {
         E returnType;
         Field field;
         try {
-            connection = MySQLUtils.getConnection();
+            setAutoCommitFor();
             ps = connection.prepareStatement(sql);
-            if (!StringUtils.ObjectsIsNull(params)) {
-                // 填入？
-                for (int i = 0; i < params.length; i++) {
-                    ps.setObject(i + 1, params[i]);
-                }
-            }
-            resultSet = ps.executeQuery();
+            setParams(ps, params);
+            ResultSet resultSet = ps.executeQuery();
             while (resultSet.next()) {
                 returnType = (E)clazz.newInstance();
                 // 获取数据
@@ -92,6 +96,7 @@ public class BaseMapper<E> {
                 }
                 ret.add(returnType);
             }
+            commitConnection();
         } catch (Exception ex) {
             System.out.println("查询数据库失败");
             logger.error(ex.getMessage());
@@ -102,4 +107,50 @@ public class BaseMapper<E> {
         return ret;
     }
 
+
+    private void setParams(PreparedStatement ps, Object... params) throws Exception{
+        if (!StringUtils.ObjectsIsNull(params)) {
+            // 填入？
+            for (int i = 0; i < params.length; i++) {
+                ps.setObject(i + 1, params[i]);
+            }
+        }
+    }
+
+    /**
+     * 提交事务
+     */
+    private void commitConnection() {
+        try {
+            if (!connection.getAutoCommit()) {
+                connection.commit();
+            }
+        } catch (Throwable e) {
+            e.printStackTrace();
+            throw new RuntimeException("不能提交" + e);
+        }
+
+    }
+
+    /**
+     * 设置自动提交
+     */
+    private void setAutoCommitFor() {
+        try {
+            if (this.autoCommit != connection.getAutoCommit()) {
+                connection.setAutoCommit(autoCommit);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("不能设置自动提交", e);
+        }
+    }
+
+    public boolean getAutoCommit() {
+        return autoCommit;
+    }
+
+    public void setAutoCommit() {
+        this.autoCommit = false;
+    }
 }
